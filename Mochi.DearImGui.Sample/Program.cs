@@ -11,6 +11,7 @@ using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 using System;
+using System.Diagnostics.Metrics;
 using System.Numerics;
 
 // Start in the app's base directory to avoid polluting imgui.ini and to make fonts accessible
@@ -104,17 +105,19 @@ internal unsafe sealed class SampleWindow : NativeWindow
         //Debug.Assert(font != null);
     }
 
+    // Our state
+    bool m_showDemoWindow = true;
+    bool m_showAnotherWindow = false;
+    Vector3 m_clearColor = new(0.45f, 0.55f, 0.6f);
+
+    float m_f = 0f;
+    int counter = 0;
+
     public void Run()
     {
+        Vector3 clearColor = m_clearColor;
+
         ImGuiIO* io = ImGui.GetIO();
-
-        // Our state
-        bool showDemoWindow = true;
-        bool showAnotherWindow = false;
-        Vector3 clearColor = new(0.45f, 0.55f, 0.6f);
-
-        float f = 0f;
-        int counter = 0;
 
         // Main loop
         while (!GLFW.WindowShouldClose(WindowPtr))
@@ -124,52 +127,19 @@ internal unsafe sealed class SampleWindow : NativeWindow
             // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application.
             // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
             // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
-            ProcessEvents();
+            ProcessWindowEvents(false);
 
             // Start the Dear ImGui frame
             RendererBackend.NewFrame();
             PlatformBackend.NewFrame();
             ImGui.NewFrame();
 
-            // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
-            if (showDemoWindow)
-            { ImGui.ShowDemoWindow(&showDemoWindow); }
+            // https://github.com/ocornut/imgui/blob/docking/imgui_demo.cpp#L7861
+            StartDockspace();
 
-            // 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
-            {
-                // Create a window called "Hello, world!" and append into it.
-                ImGui.Begin("Hello, world!");
+            DrawGui();
 
-                // Display some text
-                ImGui.Text("This is some useful text.");
-
-                // Edit bools storing our window open/close state
-                ImGui.Checkbox("Demo Window", &showDemoWindow);
-                ImGui.Checkbox("Another Window", &showAnotherWindow);
-
-                // Edit 1 float using a slider from 0.0f to 1.0f
-                ImGui.SliderFloat("float", &f, 0f, 1f, "%.3f"); //BIOQUIRK: Default string argument
-                ImGui.ColorEdit3("clear color", &clearColor);
-
-                // Buttons return true when clicked (most widgets return true when edited/activated)
-                if (ImGui.Button("Button", default)) //BIOQUIRK: Default vector argument
-                { counter++; }
-                ImGui.SameLine();
-                ImGui.Text($"counter = {counter}");
-
-                ImGui.Text($"Application average {1000f / io->Framerate} ms/frame ({io->Framerate} FPS)");
-                ImGui.End();
-            }
-
-            // 3. Show another simple window.
-            if (showAnotherWindow)
-            {
-                ImGui.Begin("Another Window", &showAnotherWindow); // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
-                ImGui.Text("Hello from another window!");
-                if (ImGui.Button("Close Me", default)) //BIOQUIRK: Default vector argument
-                { showAnotherWindow = false; }
-                ImGui.End();
-            }
+            EndDockspace();
 
             // Rendering
             {
@@ -194,6 +164,82 @@ internal unsafe sealed class SampleWindow : NativeWindow
                 GLFW.SwapBuffers(WindowPtr);
             }
         }
+    }
+
+    private void DrawGui()
+    {
+        bool showDemoWindow = m_showDemoWindow;
+        bool showAnotherWindow = m_showAnotherWindow;
+        Vector3 clearColor = m_clearColor;
+        float f = m_f;
+
+        // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
+        if (showDemoWindow)
+        { ImGui.ShowDemoWindow(&showDemoWindow); }
+
+        // 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
+        {
+            // Create a window called "Hello, world!" and append into it.
+            ImGui.Begin("Hello, world!");
+
+            // Display some text
+            ImGui.Text("This is some useful text.");
+
+            // Edit bools storing our window open/close state
+            ImGui.Checkbox("Demo Window", &showDemoWindow);
+            ImGui.Checkbox("Another Window", &showAnotherWindow);
+
+            // Edit 1 float using a slider from 0.0f to 1.0f
+            ImGui.SliderFloat("float", &f, 0f, 1f, "%.3f"); //BIOQUIRK: Default string argument
+            ImGui.ColorEdit3("clear color", &clearColor);
+
+            // Buttons return true when clicked (most widgets return true when edited/activated)
+            if (ImGui.Button("Button", default)) //BIOQUIRK: Default vector argument
+            { counter++; }
+            ImGui.SameLine();
+            ImGui.Text($"counter = {counter}");
+
+            ImGuiIO* io = ImGui.GetIO();
+            ImGui.Text($"Application average {1000f / io->Framerate} ms/frame ({io->Framerate} FPS)");
+            ImGui.End();
+        }
+
+        m_showDemoWindow = showDemoWindow;
+        m_showAnotherWindow = showAnotherWindow;
+        m_clearColor = clearColor;
+        m_f = f;
+    }
+
+    private void StartDockspace()
+    {
+        // https://www.youtube.com/watch?v=RFXCzVYe0F0
+        // parent window flags, it always has a menu bar and can't be docked
+        ImGuiWindowFlags windowFlags = ImGuiWindowFlags.MenuBar | ImGuiWindowFlags.NoDocking;
+
+        ImGuiViewport* viewport = ImGui.GetMainViewport();
+        ImGui.SetNextWindowPos(viewport->WorkPos, ImGuiCond.Always, Vector2.Zero);
+        ImGui.SetNextWindowSize(viewport->WorkSize);
+
+        // window styling
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, 0);
+        ImGui.PushStyleVar(ImGuiStyleVar.WindowBorderSize, 0);
+
+        windowFlags |= ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoCollapse |
+            ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove |
+            ImGuiWindowFlags.NoBringToFrontOnFocus | ImGuiWindowFlags.NoNavFocus;
+
+        bool open = true;
+        ImGui.Begin("Dockspace Demo", &open, windowFlags);
+
+        ImGui.PopStyleVar(2);
+
+        // The C++ demo shows how to remove the background so the game can show through.
+        ImGui.DockSpace(ImGui.GetID("Dockspace Demo"), Vector2.Zero);
+    }
+
+    private void EndDockspace()
+    {
+        ImGui.End();
     }
 
     protected override void Dispose(bool disposing)
