@@ -2,23 +2,48 @@
 using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
+using System.Runtime.InteropServices;
 
 namespace ImGuiNET.OpenTK.Sample;
 
 public class Window : GameWindow
 {
     ImGuiController _controller;
+    SceneRender _scene;
 
     public Window() : base(GameWindowSettings.Default, new NativeWindowSettings() { Size = new Vector2i(1600, 900), APIVersion = new Version(3, 3) })
     { }
 
+    private static DebugProc _debugProcCallback = DebugCallback;
+    private static GCHandle _debugProcCallbackHandle;
+    private static void DebugCallback(DebugSource source, DebugType type, int id,
+    DebugSeverity severity, int length, IntPtr message, IntPtr userParam)
+    {
+        string messageString = Marshal.PtrToStringAnsi(message, length);
+        Console.WriteLine($"{severity} {type} | {messageString}");
+
+        if (type == DebugType.DebugTypeError)
+            throw new Exception(messageString);
+    }
+
+    void SetupDebugging()
+    {
+        _debugProcCallbackHandle = GCHandle.Alloc(_debugProcCallback);
+
+        GL.DebugMessageCallback(_debugProcCallback, IntPtr.Zero);
+        GL.Enable(EnableCap.DebugOutput);
+        GL.Enable(EnableCap.DebugOutputSynchronous);
+    }
+
     protected override void OnLoad()
     {
         base.OnLoad();
-
+        SetupDebugging();
         Title += ": OpenGL Version: " + GL.GetString(StringName.Version);
 
         _controller = new ImGuiController(ClientSize.X, ClientSize.Y);
+        _scene = new SceneRender(this);
+        Error.Check();
     }
 
     protected override void OnResize(ResizeEventArgs e)
@@ -43,8 +68,13 @@ public class Window : GameWindow
 
         _controller.StartDockspace();
 
+        Error.Check();
         ImGui.ShowDemoWindow();
 
+        Error.Check();
+        _scene.DrawViewportWindow();
+
+        Error.Check();
         _controller.EndDockspace();
 
         _controller.Render();
@@ -67,5 +97,13 @@ public class Window : GameWindow
         base.OnMouseWheel(e);
 
         _controller.MouseScroll(e.Offset);
+    }
+
+    protected override void OnUnload()
+    {
+        _scene.Dispose();
+        _controller.Dispose();
+
+        base.OnUnload();
     }
 }
