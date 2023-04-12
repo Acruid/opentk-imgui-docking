@@ -10,7 +10,7 @@ internal class SceneRender : IDisposable
     // https://learnopengl.com/Advanced-OpenGL/Framebuffers
     // https://stackoverflow.com/questions/9261942/opentk-c-sharp-roatating-cube-example
 
-    private RotatingCubeDrawer _drawer;
+    private TriangleDrawer _drawer;
 
     int fbo;
     int rbo;
@@ -51,6 +51,8 @@ internal class SceneRender : IDisposable
                 if (fbo == 0)
                 {
                     fbo = GL.GenFramebuffer();
+                    // bind our frame buffer
+                    GL.BindFramebuffer(FramebufferTarget.Framebuffer, fbo);
                     GL.ObjectLabel(ObjectLabelIdentifier.Framebuffer, fbo, 10, "GameWindow");
                 }
 
@@ -72,8 +74,8 @@ internal class SceneRender : IDisposable
                     GL.DeleteRenderbuffer(rbo);
 
                 rbo = GL.GenRenderbuffer();
-                GL.ObjectLabel(ObjectLabelIdentifier.Renderbuffer, rbo, 16, "GameWindow:Depth");
                 GL.BindRenderbuffer(RenderbufferTarget.Renderbuffer, rbo);
+                GL.ObjectLabel(ObjectLabelIdentifier.Renderbuffer, rbo, 16, "GameWindow:Depth");
                 GL.RenderbufferStorage(RenderbufferTarget.Renderbuffer, RenderbufferStorage.DepthComponent32f, wsizei.X, wsizei.Y);
                 GL.FramebufferRenderbuffer(FramebufferTarget.Framebuffer, FramebufferAttachment.DepthAttachment, RenderbufferTarget.Renderbuffer, rbo);
                 //GL.BindRenderbuffer(RenderbufferTarget.Renderbuffer, 0);
