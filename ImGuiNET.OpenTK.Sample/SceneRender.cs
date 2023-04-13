@@ -10,7 +10,7 @@ internal class SceneRender : IDisposable
     // https://learnopengl.com/Advanced-OpenGL/Framebuffers
     // https://stackoverflow.com/questions/9261942/opentk-c-sharp-roatating-cube-example
 
-    private TriangleDrawer _drawer;
+    private RotatingCubeDrawer _drawer;
 
     int fbo;
     int rbo;
