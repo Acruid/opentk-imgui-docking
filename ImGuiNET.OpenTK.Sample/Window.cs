@@ -67,6 +67,40 @@ public class Window : GameWindow
         GL.ClearColor(new Color4(0, 32, 48, 255));
         GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit | ClearBufferMask.StencilBufferBit);
 
+        // Start the menu bar.
+        ImGui.BeginMainMenuBar();
+
+        // Add a file menu.
+        if (ImGui.BeginMenu("File"))
+        {
+            // Add a new item to the file menu.
+            if (ImGui.MenuItem("New"))
+            {
+                // Do something.
+            }
+
+            // Add an open item to the file menu.
+            if (ImGui.MenuItem("Open"))
+            {
+                // Do something.
+            }
+
+            // Add a save item to the file menu.
+            if (ImGui.MenuItem("Save"))
+            {
+                // Do something.
+            }
+
+            // Add a exit item to the file menu.
+            if (ImGui.MenuItem("Exit"))
+            {
+                Close();
+            }
+
+            // End the file menu.
+            ImGui.EndMenu();
+        }
+
         _controller.StartDockspace();
 
         Error.Check();
