@@ -40,6 +40,7 @@ public class Window : GameWindow
         base.OnLoad();
         SetupDebugging();
         Title += ": OpenGL Version: " + GL.GetString(StringName.Version);
+        VSync = VSyncMode.On;
 
         _controller = new ImGuiController(ClientSize.X, ClientSize.Y);
         _scene = new SceneRender(this);
